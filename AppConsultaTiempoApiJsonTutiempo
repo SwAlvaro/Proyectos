@@ -1,0 +1,62 @@
+package UtilsMeteo;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import org.json.JSONObject;
+/**
+ *
+ * @author alvaro
+ */
+public class PeticionTiempo {
+ public static void main(String [] args) throws IOException{  
+ String montmelo="https://api.tutiempo.net/json/?lan=es&apid=f45d5d6fs4f6sd5f4=7048";    
+ String leganes="https://api.tutiempo.net/json/?lan=es&apid=f45d5d6fs4f6sd5f4=3694";
+ String valencia="https://api.tutiempo.net/json/?lan=es&apid=f45d5d6fs4f6sd5f4=1069";
+ String vigo="https://api.tutiempo.net/json/?lan=es&apid=f45d5d6fs4f6sd5f4=13103";
+ 
+   PeticionTiempo p1 = new PeticionTiempo();
+   p1.consultaTiempo(montmelo);
+   
+   PeticionTiempo p2 = new PeticionTiempo();
+   p2.consultaTiempo(leganes);
+   
+   PeticionTiempo p3 = new PeticionTiempo();
+   p3.consultaTiempo(valencia);
+   
+   PeticionTiempo p4 = new PeticionTiempo();
+   p4.consultaTiempo(vigo);
+   
+ }  
+    Meteo consultaTiempo(String consulta) throws IOException{
+        Meteo MeteoRespuesta = new Meteo();
+        URL url = new URL(consulta);       
+        HttpURLConnection con = (HttpURLConnection) url.openConnection();
+        con.setRequestProperty("Content-Type", "application/json");
+        con.setRequestMethod("GET");
+        con.setUseCaches(false);
+        con.setDoInput(true);
+        con.setDoOutput(true);
+        con.setReadTimeout(5000);
+        con.setConnectTimeout(5000);
+        con.connect();
+        StringBuilder respuesta = new StringBuilder();
+        BufferedReader br = new BufferedReader(new InputStreamReader(
+                con.getInputStream(), "utf-8"));
+        String line = null;
+        while ((line = br.readLine()) != null) {
+            respuesta.append(line + "\n");}
+        br.close();        
+    JSONObject objJSON = new JSONObject(respuesta.toString());
+    MeteoRespuesta.setTemperaturaMax(objJSON.getJSONObject("day1").getInt("temperature_max"));
+    MeteoRespuesta.setTemperaturaMin(objJSON.getJSONObject("day1").getInt("temperature_min"));
+    MeteoRespuesta.setHumedad(objJSON.getJSONObject("day1").getInt("humidity"));
+    MeteoRespuesta.setVelocidadViento(objJSON.getJSONObject("day1").getInt("wind"));
+    MeteoRespuesta.setDireccionViento(objJSON.getJSONObject("day1").getString("wind_direction"));
+    MeteoRespuesta.setCielo(objJSON.getJSONObject("day1").getString("text"));
+    MeteoRespuesta.setLocalidad(objJSON.getJSONObject("locality").getString("name"));   
+        System.out.println(MeteoRespuesta.toString());      
+        return MeteoRespuesta;
+    }
+}
