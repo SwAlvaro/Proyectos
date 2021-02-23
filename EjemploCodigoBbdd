@@ -1,0 +1,215 @@
+
+package Clases;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import static java.lang.System.out;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+import org.json.JSONObject;
+
+/**
+ *
+ * @author alvaro
+ */
+@WebServlet(name = "ServletLoginAdmin", urlPatterns = {"/ServletLoginAdmin"})
+public class ServletLoginAdmin extends HttpServlet {
+
+    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException, SQLException {
+
+        try {
+
+            String ip = "localhost";
+            String puerto = "3306";
+            String bbdd = "swappmotos";
+            String user = "root";
+            String driver = "com.mysql.cj.jdbc.Driver";
+
+            String bdMailAdm = "";//VARIABLES ADMINISTRADOR
+            String bdPassAdm = "";
+            String bdNombreAdm = "";
+            String bdApellidosAdm = "";
+            String bdTelefonoAdm = "";
+            String bdDniAdm = "";
+            String credencial = "admin@sw.com";
+            String contra = "a";
+            String formMail = request.getParameter("mailadm");
+            String formPassword = request.getParameter("passwordadm");
+
+            int idMoto = 0;//VARIABLES MOTOS
+            String Moto = "";
+            String potenciaMoto = "";
+            String velocidadMoto = "";
+            String urlMoto = "";
+            int tarifaMoto = 0;
+
+            int idC = 0;//VARIABLES CIRCUITOS
+            String nombreC = "";
+            String ciudadC = "";
+            String longitudC = "";
+            String urlC = "";
+            String urlFotoC = "";
+
+            try {
+                Class.forName(driver);
+            } catch (ClassNotFoundException ex) {
+                System.out.println("Error al registrar el driver de MySQL: " + ex);
+            }
+            Connection conexion = null;
+            conexion = DriverManager.getConnection("jdbc:mysql://" + ip + ":" + puerto + "/" + bbdd + "?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC",
+                    "" + user + "", "");
+            Statement st = conexion.createStatement();//st statement para conexion y ResultSet Cliente
+            String Qsql = "SELECT * FROM clientes WHERE mail='" + formMail + "';";//consulta datos cliente
+            ResultSet rs = st.executeQuery(Qsql);
+
+            Statement st1 = conexion.createStatement();//st statement para conexion y ResultSet Motos
+            String QsqlMotos1 = "SELECT * FROM motos;";//consulta motos
+            ResultSet rs1 = st1.executeQuery(QsqlMotos1);
+
+            Statement st2 = conexion.createStatement();//st statement para conexion y ResultSet circuitos
+            String QsqlCircuitos = "SELECT * FROM circuitos;";//consulta circuitos
+            ResultSet rs2 = st2.executeQuery(QsqlCircuitos);
+
+            ArrayList<Motos> Motos = new ArrayList<Motos>();//CREO ARRAY DE MOTOS
+            ArrayList<Circuitos> Circuitos = new ArrayList<Circuitos>();//CREO ARRAY DE CIRCUITOS
+
+            while (rs.next()) {//este while extrae los datos del usuario
+                bdMailAdm = rs.getString("mail");
+                bdPassAdm = rs.getString("password");
+                bdNombreAdm = rs.getString("nombre");
+                bdApellidosAdm = rs.getString("apellidos");
+                bdTelefonoAdm = rs.getString("telefono");
+                bdDniAdm = rs.getString("dni");
+            }
+
+            while (rs1.next()) {//este while extrae los datos de las motos
+                idMoto = rs1.getInt("id_moto");
+                Moto = rs1.getString("moto");
+                potenciaMoto = rs1.getString("potencia");
+                velocidadMoto = rs1.getString("velocidad");
+                urlMoto = rs1.getString("url_foto");
+                tarifaMoto = rs1.getInt("tarifa");
+                Motos.add(new Motos(idMoto, Moto, potenciaMoto, velocidadMoto, urlMoto, tarifaMoto));
+            }
+
+            while (rs2.next()) {//este while extrae los datos de los circuitos
+                idC = rs2.getInt("id_circuito");
+                nombreC = rs2.getString("nombre");
+                ciudadC = rs2.getString("ciudad");
+                longitudC = rs2.getString("longitud");
+                urlC = rs2.getString("url");
+                urlFotoC = rs2.getString("url_foto_circuito");
+
+                Circuitos.add(new Circuitos(idC, nombreC, ciudadC, longitudC, urlC, urlFotoC));
+            }
+
+//-----------------------------------------------------------------------------------------------------------------------------      
+            String consultaMeteoJerez = "https://api.tutiempo.net/json/?lan=es&apid=asT4aza4aqqVcpX&lid=6262";
+            String consultaMeteoCheste = "https://api.tutiempo.net/json/?lan=es&apid=asT4aza4aqqVcpX&lid=964";
+            String consultaMeteoMontmelo = "https://api.tutiempo.net/json/?lan=es&apid=asT4aza4aqqVcpX&lid=7048";
+            String consultaMeteoJarama = "https://api.tutiempo.net/json/?lan=es&apid=asT4aza4aqqVcpX&lid=3638";
+
+            //PETICION JSON TUTIEMPO PARA PREDICCION DEL JARAMA, PRUEBA 1     
+            response.setContentType("text/html;charset=UTF-8");
+            URL url = new URL(consultaMeteoJarama);
+            String agent = java.security.AccessController.doPrivileged(new sun.security.action.GetPropertyAction("http.agent"));
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setRequestProperty("Content-Type", "application/json");
+            con.setRequestMethod("GET");
+            con.setUseCaches(false);
+            con.setDoInput(true);
+            con.setDoOutput(true);
+            con.setReadTimeout(5000);
+            con.setConnectTimeout(5000);
+            con.connect();
+            StringBuilder respuesta = new StringBuilder();
+            BufferedReader br = new BufferedReader(new InputStreamReader(
+                    con.getInputStream(), "utf-8"));
+            String line = null;
+            while ((line = br.readLine()) != null) {
+                respuesta.append(line + "\n");
+            }
+            br.close();
+            ArrayList<Meteo> Meteo1 = new ArrayList<Meteo>();
+            JSONObject objJSON = new JSONObject(respuesta.toString());
+            int temperaturaMaxJ = objJSON.getJSONObject("day1").getInt("temperature_max");
+            int temperaturaMinJ = objJSON.getJSONObject("day1").getInt("temperature_min");
+            int humedadJ = objJSON.getJSONObject("day1").getInt("humidity");
+            int velocidadVientoJ = objJSON.getJSONObject("day1").getInt("wind");
+            String direccionVientoJ = objJSON.getJSONObject("day1").getString("wind_direction");
+            String cieloJ = objJSON.getJSONObject("day1").getString("text");
+            String local = "sanse";
+            Meteo1.add(new Meteo(local, temperaturaMaxJ, temperaturaMinJ, humedadJ, velocidadVientoJ, direccionVientoJ, cieloJ));
+            request.getSession().setAttribute("MeteoJarama", Meteo1);
+            // FIN PETICION JSON TUTIEMPO PARA PREDICCION DEL JARAMA, PRUEBA 1
+
+            if (formMail.equals(credencial) && formPassword.equals(contra)) {//SI EL PASSWORD COINCIDE PASA LOS DATOS POR SESION Y REDIRECCIONA A MENUPRINCIPAL
+
+                request.getSession().setAttribute("bdMailAdm", bdMailAdm);
+                request.getSession().setAttribute("bdNombreAdm", bdNombreAdm);
+                request.getSession().setAttribute("bdApellidosAdm", bdApellidosAdm);
+                request.getSession().setAttribute("bdTelefonoAdm", bdTelefonoAdm);
+                request.getSession().setAttribute("bdDniAdm", bdDniAdm);
+                request.getSession().setAttribute("ArrayListMotos", Motos);
+                request.getSession().setAttribute("ArrayListCircuitos", Circuitos);
+                response.sendRedirect("MenuGestion.jsp");
+
+            } else {
+
+                response.sendRedirect("index1.jsp");
+
+            }
+
+            st.close();
+            st1.close();
+            st2.close();
+            conexion.close();
+        } finally {
+            out.close();
+        }
+
+    }
+
+    @Override
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            processRequest(request, response);
+        } catch (SQLException ex) {
+            Logger.getLogger(ServletLoginAdmin.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    @Override
+    protected void doPost(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        try {
+            processRequest(request, response);
+        } catch (SQLException ex) {
+            Logger.getLogger(ServletLoginAdmin.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    @Override
+    public String getServletInfo() {
+        return "Short description";
+    }// </editor-fold>
+
+}
